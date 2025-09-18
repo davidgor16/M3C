@@ -13,7 +13,7 @@ from datetime import datetime
 def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir) if os.path.isdir(os.path.join(a_dir, name))]
 
-requirement_list = {'gopt': 0.0, 'lstm': 0.0,"kmeans_distance":0.0}
+requirement_list = {'m3c': 0.0}
 
 # second pass
 for requirement in requirement_list.keys():

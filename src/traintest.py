@@ -10,6 +10,7 @@ import sys
 import os, shutil
 import time
 from torch.utils.data import Dataset, DataLoader
+from models.M3C import M3C
 
 sys.path.append(os.path.dirname(os.path.dirname(sys.path[0])))
 
@@ -19,12 +20,12 @@ import argparse
 print("I am process %s, running on %s: starting (%s)" % (os.getpid(), os.uname()[1], time.asctime()))
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-# PARAMETROS GENERALES
+# GENERAL PARAMETERS
 parser.add_argument("--exp-dir", type=str, default="./exp/", help="directory to dump experiments")
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, metavar='LR', help='initial learning rate')
 parser.add_argument("--n-epochs", type=int, default=3, help="number of maximum training epochs")
 parser.add_argument("--batch_size", type=int, default=25, help="training batch size")
-parser.add_argument("--embed_dim", type=int, default=12, help="gopt transformer embedding dimension")
+parser.add_argument("--embed_dim", type=int, default=12, help="M3C transformer embedding dimension")
 parser.add_argument("--loss_w_phn", type=float, default=1, help="weight for phoneme-level loss")
 parser.add_argument("--loss_w_word", type=float, default=1, help="weight for word-level loss")
 parser.add_argument("--loss_w_utt", type=float, default=1, help="weight for utterance-level loss")
@@ -33,41 +34,41 @@ parser.add_argument("--am", type=str, default='librispeech', help="name of the a
 parser.add_argument("--noise", type=float, default=0., help="the scale of random noise added on the input GoP feature")
 parser.add_argument("--alpha_mdd", type=float, default=0.3, help="weight for MDD loss")
 
-# PARAMETROS DE EXTRACCIÓN DE CARACTERÍSTICAS VC
+# V/C FEATURE EXTRACTION PARAMETERS
 parser.add_argument("--num_convs_vc", type=int, default=32, help="Number of convolutional kernels of the vowel and consonant feature extractor CNN")
-parser.add_argument("--input_dim_vowels", type=int, default=6, help="Dimension of the input for the Vowel CNN")
-parser.add_argument("--input_dim_consonants", type=int, default=6, help="Dimension of the input for the Consonant CNN")
-parser.add_argument("--output_dim_vc", type=int, default=6, help="Dimension of the output for the Consonant/Vowel CNN")
-parser.add_argument("--dropout_cnn_vc", type=float, default=0., help="Probability of dropout for Vowel/Consonant CNN output")
+parser.add_argument("--input_dim_vowels", type=int, default=6, help="Dimension of the input for the Vowel CCC")
+parser.add_argument("--input_dim_consonants", type=int, default=6, help="Dimension of the input for the Consonant CCC")
+parser.add_argument("--output_dim_vc", type=int, default=6, help="Dimension of the output for the Consonant/Vowel CCC")
+parser.add_argument("--dropout_cnn_vc", type=float, default=0., help="Probability of dropout for Vowel/Consonant CCC output")
 parser.add_argument("--dropout_mlp_vc", type=float, default=0., help="Probability of dropout for Vowel/Consonant  MLP output")
 
-# PARAMETROS DE EXTRACCIÓN DE CARACTERÍSTICAS SSL
-parser.add_argument("--num_convs_ssl", type=int, default=32, help="Number of convolutional kernels of the SSL feature extractor CNN")
-parser.add_argument("--input_dim_ssl", type=int, default=6, help="Dimension of the input for the SSL CNN")
-parser.add_argument("--output_dim_ssl", type=int, default=6, help="Dimension of the output for the SSL CNN")
-parser.add_argument("--dropout_cnn_ssl", type=float, default=0., help="Probability of dropout for SSL CNN output")
+# SSL FEATURE EXTRACTION PARAMETERS
+parser.add_argument("--num_convs_ssl", type=int, default=32, help="Number of convolutional kernels of the SSL feature extractor CCC")
+parser.add_argument("--input_dim_ssl", type=int, default=6, help="Dimension of the input for the SSL CCC")
+parser.add_argument("--output_dim_ssl", type=int, default=6, help="Dimension of the output for the SSL CCC")
+parser.add_argument("--dropout_cnn_ssl", type=float, default=0., help="Probability of dropout for SSL CCC output")
 parser.add_argument("--dropout_mlp_ssl", type=float, default=0., help="Probability of dropout for SSL MLP output")
 
-# PARAMETROS FUSION CARACTERISTICAS
+# FEATURE FUSION PARAMETERS
 parser.add_argument("--fusion_dim", type=int, default=10, help="Dimension of the output of the MLP fusion of SSL and V/C features")
 parser.add_argument("--dropout_mlp_fusion", type=float, default=0., help="Probability of dropout for Fusion MLP output")
 
-# PARAMETROS NIVEL FONEMA
-parser.add_argument("--num_convs_phn", type=int, default=32, help="Number of convolutional kernels of the Phoneme feature extractor CNN")
-parser.add_argument("--output_dim_phn", type=int, default=6, help="Dimension of the output for the Phoneme CNN")
-parser.add_argument("--dropout_cnn_phn", type=float, default=0., help="Probability of dropout for Phoneme CNN output")
+# PHONEME-LEVEL PARAMETERS
+parser.add_argument("--num_convs_phn", type=int, default=32, help="Number of convolutional kernels of the Phoneme feature extractor CCC")
+parser.add_argument("--output_dim_phn", type=int, default=6, help="Dimension of the output for the Phoneme CCC")
+parser.add_argument("--dropout_cnn_phn", type=float, default=0., help="Probability of dropout for Phoneme CCC output")
 parser.add_argument("--dropout_mlp_phn", type=float, default=0., help="Probability of dropout for Phoneme MLP output")
 
-# PARAMETROS NIVEL PALABRA
-parser.add_argument("--num_convs_word", type=int, default=32, help="Number of convolutional kernels of the Word feature extractor CNN")
-parser.add_argument("--output_dim_word", type=int, default=6, help="Dimension of the output for the Word CNN")
-parser.add_argument("--dropout_cnn_word", type=float, default=0., help="Probability of dropout for Word CNN output")
+# WORD-LEVEL PARAMETERS
+parser.add_argument("--num_convs_word", type=int, default=32, help="Number of convolutional kernels of the Word feature extractor CCC")
+parser.add_argument("--output_dim_word", type=int, default=6, help="Dimension of the output for the Word CCC")
+parser.add_argument("--dropout_cnn_word", type=float, default=0., help="Probability of dropout for Word CCC output")
 parser.add_argument("--dropout_mlp_word", type=float, default=0., help="Probability of dropout for Word MLP output")
 
-# PARAMETROS NIVEL FRASE
-parser.add_argument("--num_convs_utt", type=int, default=32, help="Number of convolutional kernels of the Utterance feature extractor CNN")
-parser.add_argument("--output_dim_utt", type=int, default=6, help="Dimension of the output for the Utterance CNN")
-parser.add_argument("--dropout_cnn_utt", type=float, default=0., help="Probability of dropout for Utterance CNN output")
+# UTTERANCE-LEVEL PARAMETERS
+parser.add_argument("--num_convs_utt", type=int, default=32, help="Number of convolutional kernels of the Utterance feature extractor CCC")
+parser.add_argument("--output_dim_utt", type=int, default=6, help="Dimension of the output for the Utterance CCC")
+parser.add_argument("--dropout_cnn_utt", type=float, default=0., help="Probability of dropout for Utterance CCC output")
 parser.add_argument("--dropout_mlp_utt", type=float, default=0., help="Probability of dropout for Utterance MLP output")
 
 # just to generate the header for the result.csv
@@ -92,7 +93,7 @@ def train(audio_model, train_loader_apa, test_loader, args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print('running on ' + str(device))
 
-    print(f"El valor de alpha_mdd es: {args.alpha_mdd}")
+    print(f"The value of alpha_mdd is: {args.alpha_mdd}")
 
     # best_cum_mAP is checkpoint ensemble from the first epoch to the best epoch
     best_epoch, best_mse = 0, 999
@@ -151,10 +152,11 @@ def train(audio_model, train_loader_apa, test_loader, args):
             words = word_label[:,:,3]
             u1, u2, u3, u4, u5, p, w1, w2, w3, x_phn, mdd = audio_model(audio_input, cano_phns, words, dur_feat, ener_feat, w2v_feat, hubert_feat, wavlm_feat)
              
-            
             # APA LOSS--------------------------------------------------------------------------------------------------------------------------
+            
             # filter out the padded tokens, only calculate the loss based on the valid tokens
             # < 0 is a flag of padded tokens
+            # phone level loss, mse
             mask_phn = (phn_label>=0)
             p = p.squeeze(2)
             p = p * mask_phn 
@@ -186,7 +188,7 @@ def train(audio_model, train_loader_apa, test_loader, args):
             real_phns = real_phns[mask].to(device)
             mdd = mdd[mask]
                      
-            # Calulamos la pérdida de MDD
+            # We compute the MDD loss
             loss_mdd = loss_fn_mdd(mdd, real_phns.long())
                 
             #------------------------------------------------------------------------------------------------------------------------------------
@@ -220,7 +222,7 @@ def train(audio_model, train_loader_apa, test_loader, args):
             best_mse = te_mse
             best_epoch = epoch
              
-            # Guardamos los resultados
+            # Save results
             result[0, :6] = [epoch, tr_mse, tr_corr, te_mse, te_corr, optimizer.param_groups[0]['lr']]
 
             result[0, 6:26] = np.concatenate([tr_utt_mse, tr_utt_corr, te_utt_mse, te_utt_corr])
@@ -275,7 +277,7 @@ def validate(audio_model, val_loader, args, best_mse):
                 x_phn = x_phn[mask]
                 mdd = mdd[mask]
                 
-                # DISTANCIAS -------------------------------------------------------------------------------------------------
+                # DISTANCES -------------------------------------------------------------------------------------------------
     
                 unique_classes = torch.unique(cano_phns)
 
@@ -286,37 +288,37 @@ def validate(audio_model, val_loader, args, best_mse):
                     if cls.item() not in centroids:
                         centroids[cls.item()] = []  
         
-                    # Añade los nuevos vectores (convertidos a lista) a los existentes
+                    # Append the new vectors (as lists) to the existing ones
                     centroids[cls.item()].extend(vectors_cls.tolist())
                 
-                # Calculamos los centroides para cada clase
+                # Compute the centroid for each class
                 for cls in centroids.keys():
                     if len(centroids[cls]) > 0:
                         centroids[cls] = torch.tensor(centroids[cls]).mean(dim=0)
                 
-                # Calculamos las distancias entre cada par de centroides
+                # Compute distances between each pair of centroids
                 num_classes = len(centroids.keys())
                 
-                centroids_list = [centroids[cls] for cls in sorted(centroids.keys())]  # Ordenar por clave
+                centroids_list = [centroids[cls] for cls in sorted(centroids.keys())]  # Sort by key
 
                 centroids_tensor = torch.stack(centroids_list)
-                distances = torch.cdist(centroids_tensor, centroids_tensor, p=2)  # Norma L2 (euclidiana)
+                distances = torch.cdist(centroids_tensor, centroids_tensor, p=2)  # L2 norm (Euclidean)
                 
-                # Enmascarar la diagonal (distancia de un centroide consigo mismo = 0)
+                # Mask the diagonal (distance of a centroid to itself = 0)
                 mask = ~torch.eye(num_classes, dtype=torch.bool, device=centroids_tensor.device)
-                valid_distances = distances[mask]  # Solo distancias entre centros distintos
+                valid_distances = distances[mask]  # Only distances between different centroids
                         
-                # Distancia media entre centroides
+                # Mean distance between centroids
                 mean_dis = valid_distances.mean()
                 
-                # Distancia absoluta entre centroides
+                # Total (sum) distance between centroids
                 sum_dis = valid_distances.sum()
                 
                 # MDD ------------------------------------------------------------------------------------------------
-                # Calculamos precision, recall y f1-score
+                # Compute precision, recall, and F1-score
                 from sklearn.metrics import precision_recall_fscore_support
                 mdd = mdd.cpu().numpy()
-                mdd = np.argmax(mdd, axis=1)  # Convertimos a etiquetas de clase
+                mdd = np.argmax(mdd, axis=1)  # Convert to class labels
                 real_phns = real_phns.cpu().numpy()
                 precision, recall, f1_score, _ = precision_recall_fscore_support(real_phns, mdd, average='macro')
                 # ------------------------------------------------------------------------------------------------------------
@@ -460,83 +462,10 @@ class GoPDataset(Dataset):
         
         # normalize the input to 0 mean and unit std.
         print(am)
-        
-        if am=='librispeech':
-            dir='librispeech_cesar'
-            norm_mean, norm_std = 3.203, 4.045
-        
-        elif am=="W2V_features_clean":
-            dir="W2V_features"
-            norm_mean, norm_std = 0.122,0.262    
-        
-        elif am=="W2V_lpp":
-            dir="W2V_LPP"
-            norm_mean, norm_std = -0.690,2.584
-            
-        elif am=="W2V_lpp_clean":
-            dir='W2V_LPP'
-            norm_mean, norm_std = 0.026, 0.111
-        
-        elif am=="W2V_lpr_clean":
-            dir='W2V_LPR'
-            norm_mean, norm_std = 0.218, 0.326
-            
-        elif am=="W2V-GOP-lpp_clean":
-            dir="W2V-GOP_LPP"
-            norm_mean, norm_std = 0, 1
-        
-        elif am=="W2V+GOP-lpp_clean":
-            dir="W2V+GOP_LPP"
-            norm_mean, norm_std = -0.005, 1.625
-            
-        elif am=='kmeans_distance':
-            dir='Kmeans_Distance'
-            norm_mean, norm_std = 32.169, 0.904
-            
-        elif am=='lpp':
-            dir='GoP_LPP'
-            norm_mean, norm_std = 3.996, 3.941
-            
-        elif am=='lpr':
-            dir='GoP_LPR'
-            norm_mean, norm_std = 1.334, 0.946
-            
-        elif am=="lpp_clean":
-            dir='GoP_LPP'
-            norm_mean, norm_std = 5.074, 0.710
-                
-        elif am=="lpr_clean":
-            dir='prueba_LPR'
-            norm_mean, norm_std = 1.341, 0.948
-              
-        elif am=="lpp_vc_clean":
-            dir='GoP_VC_LPP'
-            norm_mean, norm_std = 4.373, 1.966
-        
-        elif am=="lpr_vc_clean":
-            dir='GoP_VC_LPR'
-            norm_mean, norm_std = 2.034, 2.053
-        
-        elif am=="features_vc_clean":
-            dir='GoP_VC_Features'
-            norm_mean, norm_std = 1.027, 1.921
-        
-        elif am=="features_vc_clean_embbedings":
-            dir='GoP_VC_Features_Embbeding'
-        
-        elif am=="features_vc_clean_embbedings_norm":
+         
+        if am=="features_vc_clean_embbedings_norm":
             dir='GoP_VC_Features_Embbeding_norm'
-            
-        elif am=="features_vc_clean_embbedings_norm_w2v_lpp":
-            dir="GoP_VC_Features_Embbeding_norm_W2V_LPP"
-            
-        elif am=="prueba_clean":
-            dir="prueba"
-            
-        elif am=="W2V-GOP_features_clean":
-            dir='W2V-GoP_features'
-            norm_mean, norm_std = 1.663, 2.122
-        
+                    
         else:
             raise ValueError('Acoustic Model Unrecognized.')
 
@@ -574,7 +503,7 @@ class GoPDataset(Dataset):
             self.utt_label = torch.tensor(np.load('../data/librispeech_cesar/te_label_utt.npy'), dtype=torch.float)
             self.word_label = torch.tensor(np.load('../data/librispeech_cesar/te_label_word.npy'), dtype=torch.float)
 
-        # normalize the GOP feature using the training set mean and std (only count the valid token features, exclude the padded tokens).
+        # No normalization is needed because our inputs are already normalized.
         #self.feat = self.norm_valid(self.feat, norm_mean, norm_std)
        
         # normalize the utt_label to 0-2 (same with phn score range)
@@ -606,34 +535,23 @@ args = parser.parse_args()
 
 am = args.am
 print('now train with {:s} acoustic models'.format(am))
-feat_dim = {'librispeech':84, 'paiia':86, 'paiib': 88,"lpp":42,"lpr":42,"lpp_clean":39,"lpr_clean":39,"kmeans_distance":39,"W2V_lpp":42,"W2V-GOP-lpp":84,"W2V_lpp_clean":39,"W2V-GOP-lpp_clean":78
-            , "W2V_lpr_clean":39,"W2V+GOP-lpp_clean":39,"W2V_features_clean":78,"W2V-GOP_features_clean":156,
-            "lpp_vc_clean":24,"lpr_vc_clean":24,"features_vc_clean":48, "features_vc_clean_prueba":48, "features_vc_clean_embbedings":24,"features_vc_clean_embbedings_norm":24,
-            "features_vc_clean_embbedings_norm_w2v_lpp":24, "prueba_clean":24}
+feat_dim = {"features_vc_clean_embbedings_norm":24}
 
 input_dim=feat_dim[am]
 
-# nowa is the best models used in this work
-if args.model == 'gopt':
-    print('now train a GOPT models')
-    audio_mdl = GOPT(embed_dim=args.embed_dim, num_heads=args.goptheads, depth=args.goptdepth, input_dim=input_dim)
-    
-# for ablation study only
-elif args.model == 'gopt_nophn':
-    print('now train a GOPT models without canonical phone embedding')
-    audio_mdl = GOPTNoPhn(embed_dim=args.embed_dim, num_heads=args.goptheads, depth=args.goptdepth, input_dim=input_dim)
-elif args.model == 'gopt_vc':
-    print('now train a GOPT models with vowel/consonant embbeding')
-    audio_mdl = GOPT_VC(num_convs_vc = args.num_convs_vc, input_dim_vowels = args.input_dim_vowels, input_dim_consonants = args.input_dim_consonants, output_dim_vc = args.output_dim_vc, dropout_cnn_vc= args.dropout_cnn_vc, dropout_mlp_vc = args.dropout_mlp_vc,
+
+if args.model == 'm3c':
+    print('now train a M3C model')
+    audio_mdl = M3C(num_convs_vc = args.num_convs_vc, input_dim_vowels = args.input_dim_vowels, input_dim_consonants = args.input_dim_consonants, output_dim_vc = args.output_dim_vc, dropout_cnn_vc= args.dropout_cnn_vc, dropout_mlp_vc = args.dropout_mlp_vc,
                         num_convs_ssl = args.num_convs_ssl, input_dim_ssl = args.input_dim_ssl, output_dim_ssl = args.output_dim_ssl, dropout_cnn_ssl= args.dropout_cnn_ssl, dropout_mlp_ssl = args.dropout_mlp_ssl,
                         fusion_dim=args.fusion_dim, dropout_mlp_fusion=args.dropout_mlp_fusion,
-                        num_convs_phn=args.num_convs_phn, output_dim_phn=args.output_dim_phn, dropout_cnn_phn=args.dropout_cnn_phn, dropout_mlp_phn=args.dropout_cnn_phn, # Parametros a nivel de fonema
-                        num_convs_word=args.num_convs_word, output_dim_word=args.output_dim_word, dropout_cnn_word=args.dropout_cnn_word, dropout_mlp_word=args.dropout_cnn_word, # Parametros a nivel de palabra
-                        num_convs_utt=args.num_convs_utt, output_dim_utt=args.output_dim_utt, dropout_cnn_utt=args.dropout_cnn_utt, dropout_mlp_utt=args.dropout_cnn_utt, # Parametros a nivel de frase
+                        num_convs_phn=args.num_convs_phn, output_dim_phn=args.output_dim_phn, dropout_cnn_phn=args.dropout_cnn_phn, dropout_mlp_phn=args.dropout_cnn_phn, # Phoneme-level parameters
+                        num_convs_word=args.num_convs_word, output_dim_word=args.output_dim_word, dropout_cnn_word=args.dropout_cnn_word, dropout_mlp_word=args.dropout_cnn_word, # Word-level parameters
+                        num_convs_utt=args.num_convs_utt, output_dim_utt=args.output_dim_utt, dropout_cnn_utt=args.dropout_cnn_utt, dropout_mlp_utt=args.dropout_cnn_utt, # Utterance-level parameters
 ) 
     print()
-    print("PARÁMETROS EXTRACCIÓN DE CARACTERISTICAS V/C")
-    print(f"Número de convoluciones: {args.num_convs_vc}")
+    print("V/C FEATURE EXTRACTION PARAMETERS")
+    print(f"Number of convolutions: {args.num_convs_vc}")
     print(f"Input dim vowels: {args.input_dim_vowels}")
     print(f"Input dim consonants: {args.input_dim_consonants}")
     print(f"Output dim: {args.output_dim_vc}")
@@ -642,8 +560,8 @@ elif args.model == 'gopt_vc':
     print()
     print()
     
-    print("PARÁMETROS EXTRACCIÓN DE CARACTERISTICAS SSL")
-    print(f"Número de convoluciones: {args.num_convs_ssl}")
+    print("SSL FEATURE EXTRACTION PARAMETERS")
+    print(f"Number of convolutions: {args.num_convs_ssl}")
     print(f"Input dim: {args.input_dim_ssl}")
     print(f"Output dim: {args.output_dim_ssl}")
     print(f"Dropout CNN: {args.dropout_cnn_ssl}")
@@ -651,30 +569,30 @@ elif args.model == 'gopt_vc':
     print()
     print()
     
-    print("PARÁMETROS FUSION CARACTERISTICAS")
+    print("FEATURE FUSION PARAMETERS")
     print(f"Fusion dim: {args.fusion_dim}")
     print(f"Dropout MLP: {args.dropout_mlp_fusion}")
     print()
     print()
     
-    print("PARÁMETROS A NIVEL DE FONEMA")
-    print(f"Número de convoluciones: {args.num_convs_phn}")
+    print("PHONEME-LEVEL PARAMETERS")
+    print(f"Number of convolutions: {args.num_convs_phn}")
     print(f"Output dim: {args.output_dim_phn}")
     print(f"Dropout CNN: {args.dropout_cnn_phn}")
     print(f"Dropout MLP: {args.dropout_mlp_phn}")
     print()
     print()
     
-    print("PARÁMETROS A NIVEL DE PALABRA")
-    print(f"Número de convoluciones: {args.num_convs_word}")
+    print("WORD-LEVEL PARAMETERS")
+    print(f"Number of convolutions: {args.num_convs_word}")
     print(f"Output dim: {args.output_dim_word}")
     print(f"Dropout CNN: {args.dropout_cnn_word}")
     print(f"Dropout MLP: {args.dropout_mlp_word}")
     print()
     print()
     
-    print("PARÁMETROS A NIVEL DE FRASE")
-    print(f"Número de convoluciones: {args.num_convs_utt}")
+    print("UTTERANCE-LEVEL PARAMETERS")
+    print(f"Number of convolutions: {args.num_convs_utt}")
     print(f"Output dim: {args.output_dim_utt}")
     print(f"Dropout CNN: {args.dropout_cnn_utt}")
     print(f"Dropout MLP: {args.dropout_mlp_utt}")
@@ -682,13 +600,6 @@ elif args.model == 'gopt_vc':
     print()
     sys.stdout.flush()
           
-elif args.model == 'lstm':
-    print('now train a baseline LSTM model')
-    audio_mdl = BaselineLSTM(embed_dim=args.embed_dim, depth=args.goptdepth, input_dim=input_dim)
-elif args.model == 'hipama':
-    print('now train a HiPAMA model')
-    audio_mdl = HiPAMA(embed_dim=args.embed_dim, depth=args.goptdepth, input_dim=input_dim)
-
 print(am)
 tr_dataset = GoPDataset('train', am=am)
 tr_dataloader_apa = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True)
@@ -696,6 +607,3 @@ te_dataset = GoPDataset('test', am=am)
 te_dataloader = DataLoader(te_dataset, batch_size=2500, shuffle=False)
 
 train(audio_mdl, tr_dataloader_apa, te_dataloader, args)
-
-
-

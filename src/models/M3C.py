@@ -1,25 +1,21 @@
-import math
-import warnings
+# -*- coding: utf-8 -*-
+# @Time    : 17/09/25 12:17 PM
+# @Author  : David Fernandez Garcia
+# @Affiliation  : Universidad de Valladolid (Research Group ECA-SIMM)
+# @Email   : david.fernandez@uva.es
+# @File    : M3C.py
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-from numpy.linalg import norm
 import json
-import pandas as pd
-import pickle
-import torchvision as tv
-import sys
 from custom_layers.attention import Aspect_Attention_op2
 from custom_layers.scoreRestraintAttentionPooling import ScoreRestraintAttentionPooling
-
-# MI MODIFICACION
-#----------------------------------------------------------------------------------------------------------
 import torch.nn as nn
 import torch.nn.functional as F
 
-    
-class Net(nn.Module):
+
+class CCC(nn.Module):
     def __init__(self, output_dim, num_convs=32, input_dim=24, dropout_cnn=.0, dropout_mlp=.0, input_channels = 1, kernel_size=(3,1)):
         super().__init__()
         
@@ -55,15 +51,21 @@ class Net(nn.Module):
         return x
 #----------------------------------------------------------------------------------------------------
 
- 
-class GOPT_VC(nn.Module):
+
+class M3C(nn.Module):
     def __init__(self,
-                 num_convs_vc, input_dim_vowels, input_dim_consonants, output_dim_vc, dropout_cnn_vc, dropout_mlp_vc, # Parametros extracción de características V/C
-                 num_convs_ssl, input_dim_ssl, output_dim_ssl, dropout_cnn_ssl, dropout_mlp_ssl,  # Parametros extracción de características SSL
-                 fusion_dim, dropout_mlp_fusion, # Parametros de fusion SSL y V/C
-                 num_convs_phn, output_dim_phn, dropout_cnn_phn, dropout_mlp_phn, # Parametros a nivel de fonema
-                 num_convs_word, output_dim_word, dropout_cnn_word, dropout_mlp_word, # Parametros a nivel de palabra
-                 num_convs_utt, output_dim_utt, dropout_cnn_utt, dropout_mlp_utt, # Parametros a nivel de frase
+                 # Parameters for V/C feature extraction
+                 num_convs_vc, input_dim_vowels, input_dim_consonants, output_dim_vc, dropout_cnn_vc, dropout_mlp_vc,
+                 # Parameters for SSL feature extraction
+                 num_convs_ssl, input_dim_ssl, output_dim_ssl, dropout_cnn_ssl, dropout_mlp_ssl,
+                 # Parameters for SSL and V/C fusion
+                 fusion_dim, dropout_mlp_fusion,
+                 # Phoneme-level parameters
+                 num_convs_phn, output_dim_phn, dropout_cnn_phn, dropout_mlp_phn,
+                 # Word-level parameters
+                 num_convs_word, output_dim_word, dropout_cnn_word, dropout_mlp_word,
+                 # Utterance-level parameters
+                 num_convs_utt, output_dim_utt, dropout_cnn_utt, dropout_mlp_utt,
                  ):
         super().__init__()
         
@@ -75,23 +77,25 @@ class GOPT_VC(nn.Module):
         self.output_dim_word = output_dim_word
         self.output_dim_utt = output_dim_utt
         
-               
-        # NIVEL DE EXTRACCIÓN DE CARACTERISTICAS
+        # FEATURE EXTRACTION LEVEL
         
         # GOP
-        self.conv_vowels= Net(input_dim=input_dim_vowels, num_convs=num_convs_vc, output_dim=output_dim_vc,dropout_cnn=dropout_cnn_vc, dropout_mlp=dropout_mlp_vc)
-        self.conv_consonants= Net(input_dim=input_dim_consonants, num_convs=num_convs_vc, output_dim=output_dim_vc,dropout_cnn=dropout_cnn_vc, dropout_mlp=dropout_mlp_vc)
+        self.ccc_vowels= CCC(input_dim=input_dim_vowels, num_convs=num_convs_vc, output_dim=output_dim_vc,dropout_cnn=dropout_cnn_vc, dropout_mlp=dropout_mlp_vc)
+        self.ccc_consonants= CCC(input_dim=input_dim_consonants, num_convs=num_convs_vc, output_dim=output_dim_vc,dropout_cnn=dropout_cnn_vc, dropout_mlp=dropout_mlp_vc)
     
         # SSL
-        self.conv_ssl= Net(input_dim=input_dim_ssl, num_convs=num_convs_ssl, output_dim=output_dim_ssl ,dropout_cnn=dropout_cnn_ssl, dropout_mlp=dropout_mlp_ssl)
+        self.ccc_ssl= CCC(input_dim=input_dim_ssl, num_convs=num_convs_ssl, output_dim=output_dim_ssl ,dropout_cnn=dropout_cnn_ssl, dropout_mlp=dropout_mlp_ssl)
         
-        # Fusion caraterísticas
+        # Feature fusion
         self.fusion_mlp = nn.Sequential(nn.Linear(output_dim_vc+output_dim_ssl+self.output_dim_duration_energy,fusion_dim),nn.LayerNorm(fusion_dim),nn.Dropout(dropout_mlp_fusion))
         
         #--------------------------------------------------------------------------------------------------------------------
-                
-        self.proj_phn = nn.Linear(output_dim_phn+1, output_dim_phn)
-        self.proj_mdd = nn.Linear(output_dim_phn+1, output_dim_phn)
+        
+        # PHONEME LEVEL
+        self.ccc_phn= CCC(input_dim=fusion_dim+1, num_convs=num_convs_phn, output_dim=output_dim_phn, dropout_cnn=dropout_cnn_phn, dropout_mlp=dropout_mlp_phn, kernel_size=(3,1))
+        
+        self.proj_phn = nn.Linear(output_dim_phn, output_dim_phn)
+        self.proj_mdd = nn.Linear(output_dim_phn, output_dim_phn)
         self.phn_attn_tmp = Aspect_Attention_op2(output_dim_phn)
      
         self.mlp_phn = nn.Sequential(nn.Linear(output_dim_phn,1))
@@ -99,8 +103,8 @@ class GOPT_VC(nn.Module):
         
         #--------------------------------------------------------------------------------------------------------------------
         
-        # Nivel de PALABRA
-        self.conv_word= Net(input_dim=output_dim_phn+1, num_convs=num_convs_word, output_dim=output_dim_word, dropout_cnn=0., dropout_mlp=dropout_mlp_word, kernel_size=(12,1))
+        # WORD LEVEL
+        self.ccc_word= CCC(input_dim=output_dim_phn, num_convs=num_convs_word, output_dim=output_dim_word, dropout_cnn=0., dropout_mlp=dropout_mlp_word, kernel_size=(12,1))
                 
         self.proj_w1 = nn.Sequential(nn.Linear(output_dim_word, output_dim_word), nn.Dropout(dropout_cnn_word))
         self.proj_w2 = nn.Sequential(nn.Linear(output_dim_word, output_dim_word), nn.Dropout(dropout_cnn_word))
@@ -113,8 +117,8 @@ class GOPT_VC(nn.Module):
         
         #--------------------------------------------------------------------------------------------------------------------
         
-        # Nivel de FRASE
-        self.conv_utt= Net(input_dim=output_dim_utt, num_convs=num_convs_utt, output_dim=output_dim_utt, dropout_cnn=dropout_cnn_utt, dropout_mlp=dropout_mlp_utt, kernel_size=(50,1))
+        # UTTERANCE LEVEL
+        self.ccc_utt= CCC(input_dim=output_dim_utt, num_convs=num_convs_utt, output_dim=output_dim_utt, dropout_cnn=dropout_cnn_utt, dropout_mlp=dropout_mlp_utt, kernel_size=(50,1))
         
         self.proj_u1 = nn.Linear(output_dim_utt, output_dim_utt)
         self.proj_u2 = nn.Linear(output_dim_utt, output_dim_utt)
@@ -138,13 +142,13 @@ class GOPT_VC(nn.Module):
         
         #-----------------------------------------------------------------------
         #-----------------------------------------------------------------------
-        with open('arpabet_to_vc.json', 'r') as file:
+        with open('../dicts/arpabet_to_vc.json', 'r') as file:
             arpa_vc = json.load(file)
               
-        with open('pureLabel_to_(0-41).json', 'r') as file:
+        with open('../dicts/pureLabel_to_(0-41).json', 'r') as file:
             arpa_long = json.load(file)
              
-        with open('(3-41)_to_(0,numPhonesUsed).json', 'r') as file:
+        with open('../dicts/(3-41)_to_(0,numPhonesUsed).json', 'r') as file:
             long_short = json.load(file)
             
         long_vc = {int(value): arpa_vc.get(key, key) for key, value in arpa_long.items()}
@@ -155,7 +159,7 @@ class GOPT_VC(nn.Module):
         #-----------------------------------------------------------------------
         #-----------------------------------------------------------------------
         
-        # DISTINCION ENTRE VOCALES Y CONSONANTES DEL phn
+        # DISTINCTION BETWEEN VOWELS AND CONSONANTS IN phn
         #-----------------------------------------------------------------------
         #-----------------------------------------------------------------------
         
@@ -175,25 +179,22 @@ class GOPT_VC(nn.Module):
         #-----------------------------------------------------------------------
         #-----------------------------------------------------------------------
                
-        # Quitamos el SIM_EMB
+        # Remove SIM_EMB (Not used in this model)
         x = x[:,:,[0,1,2],:]
             
-        # Creamos una mascara para quitar las posiciones que corresponden a -1s
+        # Create a mask to remove positions that correspond to -1s
         mask = (phn != -1)
         
-        # Obtener los índices donde phn_vc == 1
+        # Get indices where phn_vc == 1
         index_consonants = torch.where(phn_vc == 1, torch.arange(50, device="cuda").expand(x.shape[0], 50), -1)
         
-        # Obtener los índices donde phn_vc == 0
+        # Get indices where phn_vc == 0
         index_vowels = torch.where(phn_vc == 0, torch.arange(50, device="cuda").expand(x.shape[0], 50), -1)
-        
-        # Obtener los índices donde phn_vc == -1
-        index_no_phn = torch.where(phn_vc == -1, torch.arange(50, device="cuda").expand(x.shape[0], 50), -1)
-         
-        # Declaramos la nueva representación procesada
+                 
+        # Declare the new processed representation
         x_conv = -torch.ones(x.shape[0],x.shape[1],(self.output_dim_vc + self.output_dim_ssl),device="cuda")
                      
-        # Procesamos por la CNN, tanto vocales como consonantes
+        # Process with the CNN for both vowels and consonants
         for i in range(x.shape[0]):
             
             # GOP
@@ -203,11 +204,11 @@ class GOPT_VC(nn.Module):
             x_vowels = x_vowels.unsqueeze(1)
             x_consonants = x_consonants.unsqueeze(1)
             
-            x_vowels = self.conv_vowels(x_vowels)
-            x_consonants = self.conv_consonants(x_consonants)
+            x_vowels = self.ccc_vowels(x_vowels)
+            x_consonants = self.ccc_consonants(x_consonants)
             
             # SSL
-            # Hubert
+            # HuBERT
             hubert_vowels = hubert_feat[i,index_vowels[i] != -1]
             hubert_consonants = hubert_feat[i,index_consonants[i] != -1]
             hubert_vowels = hubert_vowels.unsqueeze(1).unsqueeze(1)
@@ -219,7 +220,7 @@ class GOPT_VC(nn.Module):
             w2v_vowels = w2v_vowels.unsqueeze(1).unsqueeze(1)
             w2v_consonants = w2v_consonants.unsqueeze(1).unsqueeze(1)
             
-            # WAVLM
+            # WavLM
             wavlm_vowels = wavlm_feat[i,index_vowels[i] != -1]
             wavlm_consonants = wavlm_feat[i,index_consonants[i] != -1]
             wavlm_vowels = wavlm_vowels.unsqueeze(1).unsqueeze(1)
@@ -228,51 +229,82 @@ class GOPT_VC(nn.Module):
             ssl_features_vowels = torch.cat((hubert_vowels,w2v_vowels,wavlm_vowels),dim=2)
             ssl_features_consonants = torch.cat((hubert_consonants,w2v_consonants,wavlm_consonants),dim=2)
  
-            ssl_features_vowels = self.conv_ssl(ssl_features_vowels)
-            ssl_features_consonants = self.conv_ssl(ssl_features_consonants)
+            ssl_features_vowels = self.ccc_ssl(ssl_features_vowels)
+            ssl_features_consonants = self.ccc_ssl(ssl_features_consonants)
              
-            # Concatenamos las salidad de las CNNs
+            # Concatenate the outputs of the CCCs
             x_vowels = torch.cat((x_vowels,ssl_features_vowels), dim=1)
             x_consonants = torch.cat((x_consonants,ssl_features_consonants), dim=1)
            
-            # Reconstruimos la estructura original
+            # Reconstruct the original structure
             x_conv[i,index_vowels[i] != -1] = x_vowels
             x_conv[i,index_consonants[i] != -1] = x_consonants
          
-        # Añadimos características a nivel de fonema   
+        # Add phoneme-level features
         dur_feat = dur_feat.unsqueeze(2)
         x_conv = torch.cat((x_conv,dur_feat,ener_feat), dim=2)
         
-        # Proyectamos las características
+        # Project the features
         x_conv_shape = x_conv.shape
         x_conv = x_conv.view(-1,(self.output_dim_vc + self.output_dim_ssl + self.output_dim_duration_energy))
         x_conv = self.fusion_mlp(x_conv)
         
-        # Reconstruimos la forma original          
+        # Restore the original shape
         x_conv=x_conv.view(x_conv_shape[0],x_conv_shape[1], self.fusion_dim)
         
-        # Añadimos un embeding vocal / consonante
+        # Add a vowel/consonant position (bit)
         vc_emb = torch.zeros(x.shape[0], x.shape[1], 1, device="cuda")
         vc_emb[phn_vc == 0] = torch.ones(1, device="cuda")
         x_conv = torch.cat((x_conv,vc_emb),dim=2)
         
-    
-        # FONEMAS -------------------------------------------------------------------------------------------------
         
-# FONEMAS -------------------------------------------------------------------------------------------------
+        # PHONEMES -------------------------------------------------------------------------------------------------
         
-        # Declaraciones iniciales
-        x_phn = -torch.ones(x.shape[0],x.shape[1],self.output_dim_phn+1,device="cuda")
+        # Initial declarations
+        x_phn = -torch.ones(x.shape[0],x.shape[1],self.output_dim_phn,device="cuda")
         p = -torch.ones(x.shape[0],x.shape[1], 1,device="cuda")
         mdd = -torch.ones(x.shape[0],x.shape[1], 48,device="cuda")
+        filler = -torch.ones(self.fusion_dim+1 ,device="cuda")
         phn_reps = []
         mdd_reps = []
 
-        # Realizamos la selección de TRIFONEMAS
+        # Select TRIPHONES
         for i in range(x_conv.shape[0]):
+            conv_phn=[]
+            for j in range(x_conv.shape[1]):
+                
+                phoneme = x_conv[i,j]
+                
+                if phoneme.sum() == 0:
+                    continue
+                
+                if j in index_vowels[i] or j in index_consonants[i]:
+                      
+                    if j == 0:
+                        triphoneme = torch.stack([filler, phoneme, x_conv[i,j+1]])
+                        conv_phn.append(triphoneme)
+                        continue
+                    
+                    elif j+1 not in index_vowels[i] and j+1 not in index_consonants[i]:
+                        triphoneme = torch.stack([x_conv[i,j-1], phoneme, filler])
+                        conv_phn.append(triphoneme)
+                        continue
+                
+                    else:
+                        triphoneme = torch.stack([x_conv[i,j-1], phoneme, x_conv[i,j+1]])
+                        conv_phn.append(triphoneme)
+                        continue
+                
+            conv_phn = torch.stack(conv_phn)
+            
+            # Prepare the input
+            conv_phn = conv_phn.unsqueeze(1)
+            
+            # Process with the phoneme CCC
+            conv_phn = self.ccc_phn(conv_phn)
                      
-            phn_rep = self.proj_phn(x_conv[i])
-            mdd_rep = self.proj_mdd(x_conv[i])
+            phn_rep = self.proj_phn(conv_phn)
+            mdd_rep = self.proj_mdd(conv_phn)
             phn_reps.append(phn_rep)
             mdd_reps.append(mdd_rep)            
 
@@ -285,22 +317,21 @@ class GOPT_VC(nn.Module):
                 p_sum = target_p + p_attn
                 p_attns.append(p_sum)
            
-            # Calculamos las regresiones a nivel de fonema
+            # Compute phoneme-level regressions
             p_predict = self.mlp_phn(p_attns[0].squeeze(0))
             mdd_predict = self.mlp_phn_mdd(p_attns[1].squeeze(0))
-            
-             
-            # Añadimos esos vectores al tensor de fonemas
-            x_phn[i,:x_conv.shape[1]] = x_conv[i]
+                        
+            # Add those vectors to the phoneme tensor
+            x_phn[i,:conv_phn.shape[0]] = conv_phn
                 
-            # Añadimos las regresiones al tensor de regresiones
+            # Add the regressions to the regression tensor
             p[i,:p_predict.shape[0]] = p_predict
             mdd[i,:mdd_predict.shape[0]] = mdd_predict
         #----------------------------------------------------------------------------------------------------
         
-        # PALABRAS ------------------------------------------------------------------------------------------
+        # WORDS ------------------------------------------------------------------------------------------
 
-        # Declaraciones previas
+        # Preliminaries
         unique_indices= [torch.unique(tensor) for tensor in words]
         x_word = -torch.ones(x.shape[0],x.shape[1],self.output_dim_word,device="cuda")
         w1 = -torch.ones(x.shape[0],x.shape[1], 1,device="cuda")
@@ -322,14 +353,14 @@ class GOPT_VC(nn.Module):
                 for _ in range(len(word_phn)):
                     conv_words.append(padded_word_phn)
                    
-            # Agrupamos las concatenaciones
+            # Group the concatenations
             conv_words = torch.stack(conv_words)
                  
-            # Preparamos la entrada
+            # Prepare the input
             conv_words = conv_words.unsqueeze(1)
         
-            # Procesamos con la CNN de palabras
-            conv_words = self.conv_word(conv_words)
+            # Process with the word CCC
+            conv_words = self.ccc_word(conv_words)
             
             ### Second output word score with aspects attention
             conv_words = conv_words.unsqueeze(0)
@@ -349,47 +380,46 @@ class GOPT_VC(nn.Module):
                  w = target_w + w_attn
                  w_attns.append(w)
 
-            # Calculamos la regresion a nivel de palabra
+            # Compute word-level regression
             w1_predict = self.mlp_word_w1(w_attns[0].squeeze())
             w2_predict  = self.mlp_word_w2(w_attns[1].squeeze())
             w3_predict  = self.mlp_word_w3(w_attns[2].squeeze())
             
-            # Añadimos esos vectores al tensor de palabras
+            # Add those vectors to the word tensor
             conv_words = conv_words.squeeze(0)
             x_word[i,:conv_words.shape[0]] = conv_words
             
-            # Extraemos los valores de las métricas
+            # Extract the metric values
             w1[i,:w1_predict.shape[0]]  = w1_predict
             w2[i,:w2_predict.shape[0]]  = w2_predict
             w3[i,:w3_predict.shape[0]]  = w3_predict   
         #----------------------------------------------------------------------------------------------------
         
-        # FRASE ------------------------------------------------------------------------------------------
+        # UTTERANCE ------------------------------------------------------------------------------------------
         u1 = -torch.ones(x.shape[0], 1,device="cuda")
         u2 = -torch.ones(x.shape[0], 1,device="cuda")
         u3 = -torch.ones(x.shape[0], 1,device="cuda")        
         u4 = -torch.ones(x.shape[0], 1,device="cuda")
         u5 = -torch.ones(x.shape[0], 1,device="cuda")
         
-        # Preparamos la entrada
+        # Prepare the input
         x_word = x_word.unsqueeze(1)
 
-        # Procesamos a nivel de frase con la CNN
-        conv_utt = self.conv_utt(x_word)
+        # Process at utterance level with the CCC
+        conv_utt = self.ccc_utt(x_word)
         
-        # Concatenamos las valoraciones a nivel de palabra
+        # Concatenate word-level scores
         word_scores = torch.stack((w1,w2,w3),dim=2).squeeze()
         
         if word_scores.dim() == 2: 
             word_scores = word_scores.unsqueeze(0)
         
-        # Ampliamos conv_utt
+        # Expand conv_utt
         conv_utt = conv_utt.unsqueeze(1).expand(conv_utt.shape[0], p[i].size(0), -1)
                         
         for i in range(x_conv.shape[0]):
             
-           
-            # Aplicamos el ScoreRestraint...
+            # Apply the ScoreRestraint Attention Pooling
             utt_score = self.utt_score_attn(conv_utt[i], p[i], mdd[i], word_scores[i], mask=mask[i])
             
             utt_score = utt_score.unsqueeze(0)
@@ -420,4 +450,3 @@ class GOPT_VC(nn.Module):
 
                 
         return u1, u2, u3, u4, u5, p, w1, w2, w3, x_phn, mdd
-
