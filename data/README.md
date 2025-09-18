@@ -1,4 +1,4 @@
-# M3C: MATRIX-STRUCTURED HIERARCHICAL CONVOLUTIONAL MODELING FOR PRONUNCIATION ASSESSMENT AND MISPRONUNCIATION DETECTION
+# M3C: Matrix-Structured Hierarchical Convolutional Modeling for Pronunciation Assessment and Mispronunciation Detection
 
 The SpeechOcean762 dataset used in this paper is an open dataset licenced with CC BY 4.0. It can be downloaded from this [link] (https://www.openslr.org/101)
 
