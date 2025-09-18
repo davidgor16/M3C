@@ -1,4 +1,4 @@
-# M3C
+# M3C: MATRIX-STRUCTURED HIERARCHICAL CONVOLUTIONAL MODELING FOR PRONUNCIATION ASSESSMENT AND MISPRONUNCIATION DETECTION
 
 This repository is the implementation of the paper, [****](https://ieeexplore.ieee.org/document/10095733/) (Submitted to ICASSP 2026).
 
