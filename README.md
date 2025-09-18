@@ -19,7 +19,7 @@ You can build the docker with the following command on your virtual environment
 
 Data folder is an empty folder. In order download the data needed to train the model, you will need to access the following [Google Drive link](https://drive.google.com/drive/folders/1a5HZ6rCQVUpEN_7xnw2HgtfV8plho7Am?usp=sharing).
 
-## Training and Evaluation (HiPAMA)
+## Training and Evaluation (M3C)
 This bash script will run each model 5 times with ([0, 1, 2, 3, 4]).
 - `cd src`
 - `bash run_M3C.sh`
