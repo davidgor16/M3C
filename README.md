@@ -1,6 +1,6 @@
 # M3C: MATRIX-STRUCTURED HIERARCHICAL CONVOLUTIONAL MODELING FOR PRONUNCIATION ASSESSMENT AND MISPRONUNCIATION DETECTION
 
-This repository is the implementation of the paper, [****](https://ieeexplore.ieee.org/document/10095733/) (Submitted to ICASSP 2026).
+This repository is the implementation of the paper, [**MATRIX-STRUCTURED HIERARCHICAL CONVOLUTIONAL MODELING FOR PRONUNCIATION ASSESSMENT AND MISPRONUNCIATION DETECTION**](https://ieeexplore.ieee.org/document/10095733/) (Submitted to ICASSP 2026).
 
 > Our code is based on the open source, [https://github.com/YuanGongND/gopt](https://github.com/YuanGongND/gopt) (Gong et al, 2022).
 
