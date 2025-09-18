@@ -7,10 +7,10 @@
 
 # train and test the models
 import sys
-import os, shutil
+import os
+import numpy as np
 import time
 from torch.utils.data import Dataset, DataLoader
-from models.M3C import M3C
 
 sys.path.append(os.path.dirname(os.path.dirname(sys.path[0])))
 
