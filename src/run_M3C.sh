@@ -5,6 +5,8 @@
 # @Email   : david.fernandez@uva.es
 # @File    : run_M3C.sh
 
+#!/usr/bin/env bash
+
 
 # GENERAL PARAMETERS
 model=m3c
@@ -59,7 +61,7 @@ alpha_mdd=0.03
 exp_dir=../exp/m3c-${lr}-${depth}-${head}-${batch_size}-${embed_dim}-${model}-${am}-br
 
 # repeat times
-repeat_list=(0 1 2 3 4)
+repeat_list=(0)
 
 for repeat in "${repeat_list[@]}"
       do
@@ -72,6 +74,6 @@ for repeat in "${repeat_list[@]}"
       --num_convs_phn ${num_convs_phn} --output_dim_phn ${output_dim_phn} --dropout_cnn_phn ${dropout_cnn_phn} --dropout_mlp_phn ${dropout_mlp_phn} \
       --num_convs_word ${num_convs_word} --output_dim_word ${output_dim_word} --dropout_cnn_word ${dropout_cnn_word} --dropout_mlp_word ${dropout_mlp_word} \
       --num_convs_utt ${num_convs_utt} --output_dim_utt ${output_dim_utt} --dropout_cnn_utt ${dropout_cnn_utt} --dropout_mlp_utt ${dropout_mlp_utt} \
-      
+
       done
 python ./collect_summary.py --exp-dir $exp_dir

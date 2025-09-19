@@ -51,7 +51,6 @@ class CCC(nn.Module):
         return x
 #----------------------------------------------------------------------------------------------------
 
-
 class M3C(nn.Module):
     def __init__(self,
                  # Parameters for V/C feature extraction
@@ -130,7 +129,7 @@ class M3C(nn.Module):
         self.utt_score_attn = ScoreRestraintAttentionPooling(num_scores=52, hidden_dim=output_dim_utt)
 
         self.mlp_utt_u1 = nn.Sequential(nn.Linear(output_dim_utt,1))
-        self.mlp_utt_u2 = nn.Sequential(nn.Linear(output_dim_utt,1), nn.Sigmoid())
+        self.mlp_utt_u2 = nn.Sequential(nn.Linear(output_dim_utt,1))
         self.mlp_utt_u3 = nn.Sequential(nn.Linear(output_dim_utt,1))
         self.mlp_utt_u4 = nn.Sequential(nn.Linear(output_dim_utt,1))
         self.mlp_utt_u5 = nn.Sequential(nn.Linear(output_dim_utt,1))
@@ -142,13 +141,13 @@ class M3C(nn.Module):
         
         #-----------------------------------------------------------------------
         #-----------------------------------------------------------------------
-        with open('../dicts/arpabet_to_vc.json', 'r') as file:
+        with open('dicts/arpabet_to_vc.json', 'r') as file:
             arpa_vc = json.load(file)
               
-        with open('../dicts/pureLabel_to_(0-41).json', 'r') as file:
+        with open('dicts/pureLabel_to_(0-41).json', 'r') as file:
             arpa_long = json.load(file)
              
-        with open('../dicts/(3-41)_to_(0,numPhonesUsed).json', 'r') as file:
+        with open('dicts/(3-41)_to_(0,numPhonesUsed).json', 'r') as file:
             long_short = json.load(file)
             
         long_vc = {int(value): arpa_vc.get(key, key) for key, value in arpa_long.items()}

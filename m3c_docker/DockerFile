@@ -1,0 +1,19 @@
+FROM nvcr.io/nvidia/pytorch:23.01-py3
+
+ARG PYTHON_ENV=my_env
+ENV PYTHON_ENV=$PYTHON_ENV
+
+ENV TZ=Europe/Madrid
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt update -y
+RUN apt install -y ffmpeg git libsndfile1 sox pip
+
+RUN /usr/bin/python -m pip install --upgrade pip
+RUN pip install kaldi-io==0.9.4 kaldiio==2.17.2 numpy panphon
+
+RUN mkdir -p /workspace && chown -R m3c:10100 /workspace
+
+USER m3c
+WORKDIR /workspace

@@ -481,10 +481,10 @@ class GoPDataset(Dataset):
             self.w2v_feat = torch.tensor(np.load('../data/'+dir+'/tr_w2v_features.npy'), dtype=torch.float)
             self.ener_feat = torch.tensor(np.load('../data/'+dir+'/tr_energy_features.npy'), dtype=torch.float)
             self.dur_feat = torch.tensor(np.load('../data/'+dir+'/tr_duration_features.npy'), dtype=torch.float)
-            self.phn_label = torch.tensor(np.load('../data/librispeech_cesar/tr_label_phn.npy'), dtype=torch.float)
-            self.real_phn_label = torch.tensor(np.load('../data/librispeech_cesar/tr_real_phn.npy'), dtype=torch.float)
-            self.utt_label = torch.tensor(np.load('../data/librispeech_cesar/tr_label_utt.npy'), dtype=torch.float)
-            self.word_label = torch.tensor(np.load('../data/librispeech_cesar/tr_label_word.npy'), dtype=torch.float)
+            self.phn_label = torch.tensor(np.load('../data/'+dir+'/tr_label_phn.npy'), dtype=torch.float)
+            self.real_phn_label = torch.tensor(np.load('../data/'+dir+'/tr_real_phn.npy'), dtype=torch.float)
+            self.utt_label = torch.tensor(np.load('../data/'+dir+'/tr_label_utt.npy'), dtype=torch.float)
+            self.word_label = torch.tensor(np.load('../data/'+dir+'/tr_label_word.npy'), dtype=torch.float)
             
         elif set == 'test':
             if "clean" in am:
@@ -498,10 +498,10 @@ class GoPDataset(Dataset):
             self.w2v_feat = torch.tensor(np.load('../data/'+dir+'/te_w2v_features.npy'), dtype=torch.float)
             self.ener_feat = torch.tensor(np.load('../data/'+dir+'/te_energy_features.npy'), dtype=torch.float)
             self.dur_feat = torch.tensor(np.load('../data/'+dir+'/te_duration_features.npy'), dtype=torch.float)
-            self.phn_label = torch.tensor(np.load('../data/librispeech_cesar/te_label_phn.npy'), dtype=torch.float)
-            self.real_phn_label = torch.tensor(np.load('../data/librispeech_cesar/te_real_phn.npy'), dtype=torch.float)
-            self.utt_label = torch.tensor(np.load('../data/librispeech_cesar/te_label_utt.npy'), dtype=torch.float)
-            self.word_label = torch.tensor(np.load('../data/librispeech_cesar/te_label_word.npy'), dtype=torch.float)
+            self.phn_label = torch.tensor(np.load('../data/'+dir+'/te_label_phn.npy'), dtype=torch.float)
+            self.real_phn_label = torch.tensor(np.load('../data/'+dir+'/te_real_phn.npy'), dtype=torch.float)
+            self.utt_label = torch.tensor(np.load('../data/'+dir+'/te_label_utt.npy'), dtype=torch.float)
+            self.word_label = torch.tensor(np.load('../data/'+dir+'/te_label_word.npy'), dtype=torch.float)
 
         # No normalization is needed because our inputs are already normalized.
         #self.feat = self.norm_valid(self.feat, norm_mean, norm_std)
