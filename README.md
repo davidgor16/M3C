@@ -4,6 +4,19 @@ This repository is the implementation of the paper, **Matrix-Structured Hierarch
 
 > Our code is based on the open source, [https://github.com/YuanGongND/gopt](https://github.com/YuanGongND/gopt) (Gong et al, 2022).
 
+## Citation
+
+@INPROCEEDINGS{m3c,
+  author={Fernández-García, David and González-Ferreras, César and Cardeñoso-Payo, Valentín and Corrales-Astorgano, Mario},
+  booktitle={ICASSP 2026 - 2026 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)}, 
+  title={Matrix-Structured Hierarchical Convolutional Modeling for Pronunciation Assessment and Mispronunciation Detection}, 
+  year={2026},
+  volume={},
+  number={},
+  pages={17567-17571},
+  keywords={Jamming;Feeds;Filtering;Filters;Feedback;Circuits;Circuits and systems;Protocols;HTTP;LoRa;computer-assisted pronunciation training;automatic pronunciation assessment;mispronunciation detection;CNN},
+  doi={10.1109/ICASSP55912.2026.11462089}}
+
 ## Dataset
 
 An open source dataset, SpeechOcean762 (licenced with CC BY 4.0) is used. You can download it from [https://www.openslr.org/101](https://www.openslr.org/101).
